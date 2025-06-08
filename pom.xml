@@ -62,6 +62,7 @@
 
         <!-- junit -->
         <junit.version>4.13.2</junit.version>
+
         <!-- testng -->
         <testng.version>7.10.2</testng.version>
 
@@ -90,13 +91,6 @@
             <artifactId>lombok</artifactId>
             <version>${lombok.version}</version>
             <!--<scope>provided</scope>-->
-        </dependency>
-
-        <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-lang3 -->
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-lang3</artifactId>
-            <version>${commons-lang3.version}</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-params -->
