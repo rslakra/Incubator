@@ -71,6 +71,12 @@ Run the program with the following command
 * [Java](https://www.java.com/en/download/mac_download.jsp) - The Java Download Location
 * [Maven](https://maven.apache.org/) - Dependency Management
 
+### Build Version
+```text
+v1.0.0Builld#2022601#commit
+```
+
+
 ## Authors
 
 ---

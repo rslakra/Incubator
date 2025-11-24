@@ -1,0 +1,61 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title>Insert title here</title>
+
+<script type="text/javascript">
+
+	function setOrderByColumn(column) {
+		alert("Selected Column :" + column.innerHTML)
+	}
+	
+</script>
+
+</head>
+<body>
+<center>
+<div style="width:500px;text-align:justify">
+  <div style="background-color:yellow">
+    Header
+  </div>
+  <div style="background-color:white">
+    Header Menu
+  </div>
+  <div style="background-color:orange;height:200px;width:100px;float:left;">
+    Left menu<br />
+    Item 1<br />
+    Item 2<br />
+    Item 3...
+  </div>
+  <div style="background-color:#eeeeee;height:200px;width:400px;float:right;">
+    Main body<br />
+    <hr width="95%" align="center" />
+    
+    <table width="100%">
+		<tr>
+			<th id="fName" onClick="setOrderByColumn(this);">First Name</th>
+			<th id="lName" onClick="setOrderByColumn(this);">Last Name</th>
+		</tr>
+		<tr>
+			<td>Rohtash</td><td>Singh</td>
+		</tr>
+		<tr>
+			<td>Sangita</td><td>Lakra</td>
+		</tr>
+		<tr>
+			<td>Harsh</td><td>Lakra</td>
+		</tr>
+		<tr>
+			<td>Anuj</td><td>Lakra</td>
+		</tr>
+	</table>
+       
+  </div>
+  <div style="background-color:yellow;clear:both">
+    Footer
+  </div>
+</div>
+</center>
+</body>
+</html>

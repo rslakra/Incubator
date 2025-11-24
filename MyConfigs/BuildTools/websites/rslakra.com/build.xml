@@ -1,0 +1,332 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="www.rslakra.com" default="all" basedir=".">
+
+    <!-- build.properties file inclusion. -->
+    <property file="${basedir}/build.properties"/>
+    <echo>Building Project ${project.name}</echo>
+
+    <!-- Website SRC Folder Structure -->
+    <property name="build.dir" value="${basedir}/build"/>
+    <property name="classes.dir" value="${build.dir}/classes"/>
+    <property name="deploy.dir" value="${build.dir}/Deploy"/>
+    <property name="libs.dir" value="${basedir}/lib"/>
+    <property name="src.dir" value="${basedir}/src"/>
+    <property name="conf.dir" value="${basedir}/conf"/>
+
+    <property name="web-content.dir" value="${basedir}/WebContent"/>
+    <property name="css.dir" value="${web-content.dir}/css"/>
+    <property name="images.dir" value="${web-content.dir}/images"/>
+    <property name="javascripts.dir" value="${web-content.dir}/javascripts"/>
+
+    <property name="meta-inf.dir" value="META-INF"/>
+    <property name="web-inf.dir" value="WEB-INF"/>
+
+    <property name="contents.dir" value="${basedir}/WebPages/${content.type}-pages"/>
+
+    <!-- Web/Application Server Settings -->
+    <property name="server.deploy.dir" value="${server.home}/${server.default.deploy.dir}"/>
+
+    <!-- EAR File Settings -->
+    <property name="dir-structure" value="-structure"/>
+    <property name="ear.dir" value="${build.dir}/ear${dir-structure}"/>
+    <property name="ear.file" value="${build.dir}/${ant.project.name}.ear"/>
+
+    <!-- WAR File Settings  -->
+    <property name="war.dir" value="${build.dir}/war${dir-structure}"/>
+    <property name="war.file" value="${ant.project.name}.war"/>
+
+    <!-- JAR File Settings -->
+    <property name="jar.dir" value="${build.dir}/jar${dir-structure}"/>
+    <property name="jar.file" value="${ant.project.name}.jar"/>
+
+    <!-- Build CLASSPATH Settings -->
+    <path id="build.classpath">
+        <fileset dir="${libs.dir}" includes="**/*.jar"/>
+    </path>
+
+    <!-- create a property containing all .jar files, prefix lib/, and seperated with a space -->
+    <pathconvert property="libs.classpath" pathsep=" ">
+        <mapper>
+            <chainedmapper>
+                <!-- remove absolute path -->
+                <flattenmapper />
+                <!-- add lib/ prefix -->
+                <globmapper from="*" to="lib/*" />
+            </chainedmapper>
+        </mapper>
+        <path>
+            <!-- libs.dir contains all jar files, in several subdirectories -->
+            <fileset dir="${libs.dir}">
+                <include name="**/*.jar" />
+            </fileset>
+        </path>
+    </pathconvert>
+
+    <!-- Default Target Settings -->
+    <target name="all" depends="deploy, end" />
+
+    <!-- Clean"'s purpose is to delete the contents of the build directory -->
+    <target name="clean"  depends="start" description="Cleans the build dir's structure and jar files.">
+        <!--delete verbose="true" includeEmptyDirs="true">
+            <fileset dir="${build.dir}"/>
+        </delete-->
+        <delete dir="${build.dir}" verbose="true" includeEmptyDirs="true" />
+        <delete file="${server.deploy.dir}/${ant.project.name}.ear" verbose="true"/>
+        <delete file="${server.deploy.dir}/${ant.project.name}.war" verbose="true"/>
+        <!--antcall target="clean.server"/ -->
+
+    </target>
+
+    <!-- Deploys build in Web/Application Server -->
+    <target name="deploy" depends="build.ear">
+        <echo>Deploying Build in ${server.deploy.dir}</echo>
+
+        <!-- Copy the .ear file into server deploy folder -->
+        <copy file="${ear.file}" todir="${server.deploy.dir}" overwrite="true"/>
+    </target>
+
+    <!--
+        Creates .ear file to make it available for deployment
+        Copy all .war and .jar files into / folder of .ear structure
+    -->
+    <target name="build.ear" depends="build.war">
+        <echo>Creating Build File ${ear.file}</echo>
+        <!-- Copy application.xml in /META-INF folder of .ear structure -->
+        <copy file="${conf.dir}/application.xml" tofile="${ear.dir}/${meta-inf.dir}/application.xml" overwrite="true"/>
+
+        <!-- Make .ear file  -->
+        <!--jar destfile="${ear.file}" basedir="${ear.dir}"/-->
+        <jar destfile="${ear.file}">
+            <fileset dir="${ear.dir}" includes="**" />
+
+            <!-- define MANIFEST.MF -->
+            <manifest>
+                <attribute name="Built-By" value="Rohtash Singh" />
+                <section name="common">
+                    <attribute name="Specification-Title" value="Devamatre Technologies" />
+                    <attribute name="Specification-Vendor" value="Devamatre Technologies" />
+                    <attribute name="Implementation-Title" value="Web Application" />
+                    <attribute name="Implementation-Vendor" value="www.devamatre.com" />
+                </section>
+            </manifest>
+        </jar>
+    </target>
+
+    <!-- Deploys build in Web/Application Server -->
+    <target name="deploy.war" depends="build.war">
+        <echo>Deploying Build in ${server.deploy.dir}</echo>
+        <!-- Copy the .war file into server deploy folder -->
+        <copy file="${ear.dir}/${war.file}" todir="${server.deploy.dir}" overwrite="true"/>
+    </target>
+
+    <!--
+        Creates .war file to make it available for deployment
+        Copy .html(s), jsp(s) and images in / (root) folder of .war structure
+        The / (root) folder also contains the css and javascript folders used in html(s) and jsp(s).
+    -->
+    <target name="build.war" depends="build">
+        <echo>Creating Build File ${war.file}</echo>
+
+        <!-- Copy .htm(s), jsp(s), images, css and javascripts folders in / folder of .war structure -->
+        <copy todir="${war.dir}">
+            <fileset dir="${web-content.dir}" includes="**"/>
+            <!--fileset dir="${jsps.dir}" includes="**"/-->
+            <fileset dir="${contents.dir}" includes="**"/>
+            <!--fileset dir="${htmls.dir}" includes="**"/-->
+        </copy>
+
+        <!-- Copy servlet classes in /WEB-INF/classes folder of .war structure -->
+        <copy todir="${war.dir}/${web-inf.dir}/classes">
+            <fileset dir="${classes.dir}" includes="**" excludes=""/>
+        </copy>
+
+        <!-- Copy web.xml in /WEB-INF folder of .war structure -->
+        <!--copy file="${web-content.dir}/web.xml" tofile="${war.dir}/${web-inf}/web.xml" overwrite="true"/-->
+        <copy todir="${war.dir}/${web-inf.dir}" overwrite="true">
+            <fileset dir="${conf.dir}/" includes="web.xml" />
+        </copy>
+
+        <!-- Copy library files in /WEB-INF/lib folder of .war structure -->
+        <copy todir="${war.dir}/${web-inf.dir}/lib">
+            <!-- Don't coyp "servletapi-2.3.jar", "jsp.jar" etc.
+                in WEB-INF/lib folder in JBOSS 5.0 and above.
+                It will create problem while running JSP.
+
+                Note: But you need all these libraries, if you are running you code
+                      in JBOSS 4.0 or below. Un-commented the following line to run properly.
+            -->
+            <!--fileset dir="${libs.dir}" includes="*.jar"/-->
+            <fileset dir="${ear.dir}" includes="*.jar"/>
+        </copy>
+
+        <!-- Make .war file  -->
+        <!--jar destfile="${ear.dir}/${war.file}" basedir="${war.dir}"/-->
+        <jar destfile="${ear.dir}/${war.file}">
+            <fileset dir="${war.dir}" includes="**" />
+
+            <!-- define MANIFEST.MF -->
+            <manifest>
+                <attribute name="Built-By" value="Rohtash Singh" />
+                <section name="common">
+                    <attribute name="Specification-Title" value="Devamatre Technologies" />
+                    <attribute name="Specification-Vendor" value="Devamatre Technologies" />
+                    <attribute name="Implementation-Title" value="Web Application .war file" />
+                    <attribute name="Implementation-Vendor" value="www.devamatre.com" />
+                </section>
+            </manifest>
+        </jar>
+
+    </target>
+
+    <!--
+        Creates .jar file to make it available for deployment.
+        Copy .html(s), jsp(s) and images in / (root) folder of .war structure
+        The / (root) folder also contains the css and javascript folders used in html(s) and jsp(s).
+    -->
+    <target name="build" depends="compile">
+        <echo>Creating Build File ${jar.file}</echo>
+
+        <copy todir="${jar.dir}">
+            <fileset dir="${classes.dir}" includes="**/*.class" />
+        </copy>
+
+        <!-- Copy ejb-jar.xml and jboss.xml in .jar file structure -->
+        <!--copy todir="${jar.dir}/${meta-inf.dir}">
+            <fileset dir="${conf.dir}/" includes="ejb-jar.xml, jboss.xml " />
+        </copy-->
+
+        <!-- Create jar file and place in ear directory -->
+        <!--jar destfile="${ear.dir}/${jar.file}" basedir="${jar.dir}" / -->
+        <jar destfile="${ear.dir}/${jar.file}">
+            <!--fileset dir="${basedir}/" includes="*.properties" excludes="build.properties, build.xml"/>
+            <fileset dir="${classes.dir}" includes="**/*.class" /-->
+            <fileset dir="${jar.dir}" includes="**" excludes="**/HelloWorld.class, **/LoginServlet.class"/>
+
+            <!-- define MANIFEST.MF -->
+            <manifest>
+                <attribute name="Built-By" value="Rohtash Singh" />
+                <!--attribute name="Main-Class" value="my.path.to.the.main.Application" / -->
+                <section name="common">
+                    <attribute name="Specification-Title" value="Devamatre Technologies" />
+                    <!--attribute name="Specification-Version" value="${component.version}" /-->
+                    <attribute name="Specification-Vendor" value="Devamatre Technologies" />
+                    <attribute name="Implementation-Title" value="Web Application" />
+                    <!--attribute name="Implementation-Version" value="${component.version} ${TODAY}" /-->
+                    <attribute name="Implementation-Vendor" value="www.devamatre.com" />
+                </section>
+
+                <!-- finally, use the magically generated libs path -->
+                <attribute name="Class-Path" value="${libs.classpath}" />
+            </manifest>
+
+        </jar>
+
+        <!-- Sign jar syntax:
+        jarsigner -keystore <keystorefilename> -storepass <store-password> -keypass <key-password> -signedjar <signed-jarfile.jar> <unsigned.jarfile> openacircle
+        jarsigner -keystore .keystore_Blideo_2008 -storepass 3nc0d3rk3y -keypass 0p3n2c1rcl3 -signedjar SOpenACircleAssistant.jar OpenACircleAssistant.jar openacircle
+        -->
+        <!-- signjar keystore="${src.dir}/Blideo_2008.keystore" storepass="3nc0d3rk3y" keypass="0p3n2c1rcl3" signedjar="${libs.dir}/S${jar.file}" jar="${libs.dir}/${jar.file}" alias="openacircle"/-->
+
+    </target>
+
+    <!-- Compiles all .java classes under the build/classes folder. -->
+    <target name="compile" depends="init" description="Compiling .java files">
+        <echo>Compiling '${src.dir}' into '${classes.dir}'</echo>
+        <!--javac srcdir="${src.dir}" destdir="${classes.dir}" listfiles="true" failonerror="true" classpathref="build.classpath"/ -->
+        <javac fork="${javac.fork}"
+               srcdir="${src.dir}"
+               destdir="${classes.dir}"
+               source="${javac.source}"
+               target="${javac.target}"
+               optimize="${javac.optimize}"
+               debug="${javac.debug}"
+               debuglevel="${javac.debug.level}"
+               listfiles="true"
+               failonerror="true"
+               includeantruntime="false"
+               classpathref="build.classpath" />
+
+        <!--copy todir="${classes.dir}">
+            <fileset dir="${src.dir}" excludes="**/*.java"/>
+        </copy-->
+    </target>
+
+    <!-- Creates base directory structure. -->
+    <target name="init" description="Makes the base dir structure">
+        <mkdir dir="${build.dir}"/>
+        <mkdir dir="${classes.dir}"/>
+        <!-- make .ear folder structure -->
+        <mkdir dir="${ear.dir}"/>
+        <mkdir dir="${ear.dir}/${meta-inf.dir}"/>
+        <!-- make .war folder structure -->
+        <mkdir dir="${war.dir}"/>
+        <mkdir dir="${war.dir}/${web-inf.dir}"/>
+        <mkdir dir="${war.dir}/${web-inf.dir}/classes"/>
+        <mkdir dir="${war.dir}/${web-inf.dir}/lib"/>
+        <!-- make .jar folder structure -->
+        <mkdir dir="${jar.dir}"/>
+        <!--mkdir dir="${deploy.dir}"/-->
+
+    </target>
+
+    <!-- Obfuscate code -->
+    <target name="post-compile">
+        <obfuscate>
+            <fileset dir="${classes.dir}"/>
+        </obfuscate>
+    </target>
+
+
+    <target name="start" description="Start's Build Process">
+        <!-- Create the Time Stamp -->
+        <tstamp>
+            <format property="TODAY" pattern="yyyy-MM-dd" />
+            <format property="DSTAMP" pattern="yyyy-MM-dd HH:mm:ss Z (EEE, dd MMM yyyy)" />
+
+            <format property="startDateTime" pattern="yyyy-MM-dd HH:mm:ss Z" />
+        </tstamp>
+        <echo />
+        <echo>Build Process started at '${startDateTime}'</echo>
+        <echo />
+    </target>
+
+    <target name="end" description="Start's Build Process">
+        <!-- Create the Time Stamp -->
+        <tstamp>
+            <format property="TODAY" pattern="yyyy-MM-dd" />
+            <format property="DSTAMP" pattern="yyyy-MM-dd HH:mm:ss Z (EEE, dd MMM yyyy)" />
+
+            <format property="endDateTime" pattern="yyyy-MM-dd HH:mm:ss Z" />
+        </tstamp>
+        <echo />
+        <echo>Build Process finished at '${endDateTime}'</echo>
+        <echo />
+    </target>
+
+    <!-- Defining ant task for yGuard -->
+    <property name="yGuard.classpath" value="${basedir}/${libs.dir}/yguard.jar"/>
+    <taskdef name="yguard" classname="com.yworks.yguard.YGuardTask" classpath="${yGuard.classpath}">
+    </taskdef>
+
+    <target name="obfuscate">
+        <yguard>
+            <inoutpair in="${deploy.dir}/${jar.file}" out="${deploy.dir}/obf_${jar.file}" />
+            <shrink logfile="shrinklog.xml">
+                <property name="error-checking" value="pedantic"/>
+                <keep>
+                    <class classes="public"/>
+                </keep>
+            </shrink>
+        </yguard>
+    </target>
+
+    <!--target name="run">
+        <java jar="${build.dir}/Examples.jar" fork="true">
+            <classpath>
+                <path refid="classpath" />
+                <path location="${jar.file}">
+            </classpath>
+        </java>
+    </target-->
+</project>
+

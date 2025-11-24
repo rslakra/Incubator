@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+	<!--
+		The heart of a Spring project is the bean definition file (or files).
+		This is an XML file that can have any name.
+	-->
+<!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" 
+          "http://www.springframework.org/dtd/spring-beans.dtd">
+
+<beans>
+	<!--
+		The root element of the bean definition file is <beans>, which
+		contains <bean> elements. The <bean> element provides several
+		attributes, but for your first bean definition you'll use just three:
+		id, class, and init-method. The id attribute defines the bean's name,
+		which is used to retrieve it from Spring. The class attribute tells
+		Spring which class to instantiate when it creates the bean. The
+		init-method attribute defines a method name on the class that will be
+		automatically invoked after Spring instantiates it. It is important to
+		know that all beans are Singletons by default, unless you specify the
+		singleton="false" attribute on the bean element. Spring automatically
+		instantiates all Singletons when it is first initialized, unless the
+		lazy-init="true" attribute is specified
+	-->
+	<bean id="mainFrame" class="com.examples.gui.MainFrame"
+		init-method="init">
+	</bean>
+
+</beans>

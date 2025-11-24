@@ -1,0 +1,62 @@
+<!--Build HTML Form-->
+<!DOCTYPE html>
+<html>
+
+<body>
+
+<form action="/action_page.php">
+    <fieldset>
+        <legend>Personal Details:</legend>
+
+        <fieldset>
+            <legend>Personalia:</legend>
+            <label for="fname">First name:</label>
+            <input type="text" id="fname" name="fname"><br><br>
+            <label for="lname">Last name:</label>
+            <input type="text" id="lname" name="lname"><br><br>
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email"><br><br>
+            <label for="birthday">Birthday:</label>
+            <input type="date" id="birthday" name="birthday"><br><br>
+        </fieldset>
+
+        <fieldset>
+            <legend>Medical History</legend>
+            <input name="history_illness"
+                   type="checkbox"
+                   value="Smallpox" tabindex="20"> Smallpox
+            <input name="history_illness"
+                   type="checkbox"
+                   value="Mumps" tabindex="21"> Mumps
+            <input name="history_illness"
+                   type="checkbox"
+                   value="Dizziness" tabindex="22"> Dizziness
+            <input name="history_illness"
+                   type="checkbox"
+                   value="Sneezing" tabindex="23"> Sneezing
+        </fieldset>
+
+        <fieldset>
+            <legend>Current Medication</legend>
+            <p>Are you currently taking any medication?</p>
+            <input name="medication_now"
+                   type="radio"
+                   value="Yes" tabindex="35">Yes
+            <input name="medication_now"
+                   type="radio"
+                   value="No" tabindex="35">No
+            <p>If you are currently taking medication, please indicate
+                it in the space below:</p>
+            <TEXTAREA name="current_medication"
+                      rows="20" cols="50"
+                      tabindex="40">
+    </TEXTAREA>
+        </fieldset>
+
+        <input type="submit" value="Submit">
+
+    </fieldset>
+</form>
+
+</body>
+</html>

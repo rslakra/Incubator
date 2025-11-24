@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+ * Ant Build Script
+ *
+ * Author		: Rohtash Singh
+ * Version		: 1.0
+ * Created On	: 02/18/2011
+ * Since		: 1.0
+ *
+ * NOTE: Pass in the following properties from the build script based on target:
+ *
+-->
+<project name="HelloWebService" default="all" basedir=".">
+
+	<echo>Building Project ${ant.project.name} ...</echo>
+
+	<!-- build.properties file inclusion. -->
+	<property file="${basedir}/build.properties"/>
+
+	<!-- Basic Structure Settings -->
+	<property name="base.dir" value="${basedir}" />
+	<property name="src.dir" value="${base.dir}/src"/>
+	<property name="web-content.dir" value="${base.dir}/WebContent"/>
+	<property name="web-inf.dir" value="WEB-INF"/>
+	<property name="classes.dir" value="${web-inf.dir}/classes"/>
+	<property name="lib.dir" value="${web-inf.dir}/lib"/>
+	<property name="web-lib.dir" value="${web-content.dir}/${lib.dir}"/>
+	<property name="libExt.dir" value="${basedir}/libExt"/>
+
+	<!-- Build and Web Application Server Settings -->
+	<property name="build.dir" value="${base.dir}/build"/>
+	<property name="web-inf-classes.dir" value="${build.dir}/${classes.dir}"/>
+	<property name="web-inf-lib.dir" value="${build.dir}/${lib.dir}"/>
+	<property name="jar.file" value="${ant.project.name}.jar"/>
+	<property name="meta-inf.dir" value="META-INF"/>
+	<property name="war.file" value="${ant.project.name}.war"/>
+	<property name="ear.file" value="${deploy-dir}/${ant.project.name}.ear"/>
+	<property name="server.deploy.dir" value="${server.home}/${server.default.deploy.dir}"/>
+
+	<property name="tar.file" value="${base.dir}/${ant.project.name}.tar"/>
+	<property name="gz.file" value="${tar.file}.gz"/>
+
+	<!-- Build CLASSPATH Settings -->
+	<path id="build.class.path">
+		<fileset dir="${web-lib.dir}" includes="**/*.jar"/>
+		<fileset dir="${libExt.dir}" includes="**/*.jar"/>
+	</path>
+
+	<!-- create a property containing all .jar files, 
+		 prefix lib/, and separated with a space -->
+	<pathconvert property="lib.classpath" pathsep=" ">
+		<mapper>
+			<chainedmapper>
+				<!-- remove absolute path -->
+				<flattenmapper />
+				<globmapper from="*" to="*" />
+			</chainedmapper>
+		</mapper>
+		<path>
+			<!-- lib.dir can contain jar files and sub-directories, so include all -->
+			<fileset dir="${web-lib.dir}" includes="**/*.jar" />
+		</path>
+	</pathconvert>
+
+	<!-- Default Target Settings -->
+	<target name="all" depends="clean, deploy, end"/>
+
+	<!-- Starts build creation process -->
+	<target name="start" description="Start's Build Process">
+		<!-- Create the Time Stamp -->
+		<tstamp>
+			<format property="TODAY" pattern="MM/dd/yyyy" />
+			<format property="DSTAMP" pattern="MM/dd/yyyy HH:mm:ss Z (EEE, dd MMM yyyy)" />
+			<format property="startDateTime" pattern="MM/dd/yyyy HH:mm:ss Z" />
+		</tstamp>
+		<echo />
+		<echo>Build Process started at '${startDateTime}'</echo>
+		<echo />
+	</target>
+
+	<!-- Clean"'s purpose is to delete the contents of the build directory -->
+	<target name="clean" depends="start" description="Cleans the build dir's structure and jar files.">
+		<echo>Cleaning ${build.dir} ...</echo>
+		<delete dir="${build.dir}" quiet="true"/>
+		<delete dir="${production.dir}" quiet="true"/>
+		<delete file="${server.deploy.dir}/${ant.project.name}.war" verbose="true" quiet="true"/>
+	</target>
+
+	<!-- Builds build directory structure -->
+	<target name="init">
+		<mkdir dir="${build.dir}" />
+		<mkdir dir="${build.dir}/${web-inf.dir}" />
+		<mkdir dir="${web-inf-classes.dir}" />
+		<mkdir dir="${web-inf-lib.dir}" />
+		<mkdir dir="${production.dir}" />
+	</target>
+
+	<!-- Compiles all .java classes under the build/classes folder. -->
+	<target name="compile" depends="init" description="Compiling .java files">
+		<echo>Compiling '${src.dir}' into '${web-inf-classes.dir}'</echo>
+		<javac fork="${javac.fork}"
+			srcdir="${src.dir}"
+			destdir="${web-inf-classes.dir}"
+            optimize="${javac.optimize}"
+            debug="${javac.debug}"
+            debuglevel="${javac.debug.level}"
+			listfiles="${javac.listfiles}"
+			includeantruntime="false"
+			classpathref="build.class.path" />
+	</target>
+
+	<!--
+		Creates .jar file to make it available for deployment.
+		Copy .html(s), jsp(s) and images in / (root) folder of .war structure
+		The / (root) folder also contains the css and javascript folders used in html(s) and jsp(s).
+	-->
+	<target name="build" depends="compile">
+		<echo>Building Jar file '${jar.file}' ...</echo>
+
+		<!-- Copy all configuration, properties, and *.xml files from 
+			 src folder (excluding .java files) to WEB-INF/classes folder.
+		-->
+		<copy todir="${web-inf-classes.dir}">
+			<fileset dir="${src.dir}" includes="**/*.xml, **/*.properties"/>
+		</copy>
+
+		<!-- JBoss 4.2.3 GA does not required duplicate .jar file of classes folder in lib folder.
+			 So, don't need to create a jar file of classes. 
+			Create jar file with MANIFEST.MF and place in /lib directory ->
+		<jar destfile="${web-inf-lib.dir}/${jar.file}">
+			<fileset dir="${web-inf-classes.dir}" includes="**" />
+			<manifest>
+				<attribute name="Built-By" value="${built-by}" />
+				<section name="Vendor Details">
+		      		<attribute name="Implementation-Title" value="${ant.project.name}"/>
+					<attribute name="Implementation-Vendor" value="${implementation-vendor}" />
+					<attribute name="Implementation-Vendor-Id" value="${implementation-vendor-id}" />
+		      		<attribute name="Implementation-Version" value="v${implementation-version} ${TODAY}"/>
+					<attribute name="Specification-Title" value="${ant.project.name}"/>
+					<attribute name="Specification-Vendor" value="${implementation-vendor}" />
+		      		<attribute name="Specification-Version" value="v${implementation-version}"/>
+				</section>
+
+				<!- set magically generated library path ->
+				<attribute name="Class-Path" value="${lib.classpath}" />
+			</manifest>
+		</jar>
+		-->
+
+		<!-- Add contents related to .war file to make it available for deployment -->
+		<echo>Building War file '${war.file}' ...</echo>
+
+		<!-- Copy *.htm(s), *.jsp(s), images, css and javascripts folders in / folder of .war structure -->
+		<copy todir="${build.dir}">
+			<fileset dir="${web-content.dir}" includes="**"/>
+		</copy>
+
+		<!-- Copy library files in /WEB-INF/lib folder of .war structure -->
+		<copy todir="${web-inf-lib.dir}">
+			<fileset dir="${web-lib.dir}" includes="**/*.jar" excludes="jbosssx.jar, servlet-api.jar" />
+		</copy>
+
+		<!-- Make .war file  -->
+		<jar destfile="${production.dir}/${war.file}">
+			<fileset dir="${build.dir}" includes="**" />
+
+			<!-- define MANIFEST.MF file properties -->
+			<manifest>
+				<attribute name="Built-By" value="${built-by}" />
+				<section name="Vendor Details">
+					<attribute name="Implementation-Title" value="${ant.project.name}"/>
+					<attribute name="Implementation-Vendor" value="${implementation-vendor}" />
+					<attribute name="Implementation-Vendor-Id" value="${implementation-vendor-id}" />
+					<attribute name="Implementation-Version" value="v${implementation-version} ${TODAY}"/>
+					<attribute name="Specification-Title" value="${ant.project.name}"/>
+					<attribute name="Specification-Vendor" value="${implementation-vendor}" />
+					<attribute name="Specification-Version" value="v${implementation-version}"/>
+				</section>
+			</manifest>
+		</jar>
+
+		<echo>Building created successfully at '${base.dir}/${war.file}'.</echo>
+	</target>
+
+	<!-- Deploys build in Web/Application Server -->
+	<target name="deploy" depends="build">
+		<echo>Deploying '${production.dir}/${war.file}' into '${server.deploy.dir}' ...</echo>
+
+		<!-- Copy the .war/.ear file into server deploy folder -->
+		<copy file="${production.dir}/${war.file}" todir="${server.deploy.dir}" overwrite="true"/>
+	</target>
+
+	<!-- Creates .tar and .tar.gz file for distribution -->
+	<target name="distribute" description="Creating .tar and .tar.gz file for distribution.">
+		<!-- Create the Time Stamp -->
+		<!--tar destfile="${tar.file}" basedir="${base.dir}"/-->
+		<tar destfile="${tar.file}">
+			<!--tarfileset dir="${base.dir}" 
+				includes="**/src, **/Prod_files, **/WebContent, **/docs, **/*.properties, **/.*, **/*.xml, **/*.txt" excludes="build" /-->
+			<tarfileset dir="${base.dir}" includes="src, Prod_files, WebContent, docs, **/*.properties, **/.*, **/*.xml, **/*.txt" excludes="build" />
+		</tar>
+
+		<gzip destfile="${gz.file}" src="${tar.file}" />
+		<echo />
+		<echo>Created Source '${tar.file}' and '${gz.file}' files.</echo>
+		<echo />
+	</target>
+
+	<!-- Ends build creation process -->
+	<target name="end" description="Build Process End's">
+		<!-- Create the Time Stamp -->
+		<tstamp>
+			<format property="TODAY" pattern="MM/dd/yyyy" />
+			<format property="DSTAMP" pattern="MM/dd/yyyy HH:mm:ss Z (EEE, dd MMM yyyy)" />
+			<format property="endDateTime" pattern="MM/dd/yyyy HH:mm:ss Z" />
+		</tstamp>
+		<echo />
+		<echo>Build Process finished at '${endDateTime}'</echo>
+		<echo />
+	</target>
+
+</project>

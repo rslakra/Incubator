@@ -1,0 +1,150 @@
+- sonar<artifactId>jgltf-model</artifactId>
+<artifactId>jgltf-validator</artifactId>
+
+<artifactId>maven-enforcer-plugin</artifactId>
+<artifactId>duplicate-finder-maven-plugin</artifactId>
+
+
+<plugin>
+<groupId>org.codehaus.mojo</groupId>
+<artifactId>findbugs-maven-plugin</artifactId>
+<version>3.0.4</version>
+<executions>
+    <execution>
+        <id>default</id>
+        <phase>process-classes</phase>
+        <goals>
+            <goal>findbugs</goal>
+        </goals>
+        <configuration>
+            <effort>Max</effort>
+            <threshold>Low</threshold>
+            <xmlOutput>true</xmlOutput>
+            <maxHeap>1024</maxHeap>
+        </configuration>
+    </execution>
+</executions>
+</plugin>
+<plugin>
+<groupId>org.codehaus.groovy.maven</groupId>
+<artifactId>gmaven-plugin</artifactId>
+<version>1.0</version>
+<executions>
+    <execution>
+        <id>findbugs-collect</id>
+        <phase>process-classes</phase>
+        <goals>
+            <goal>execute</goal>
+        </goals>
+        <configuration>
+            <source><![CDATA[
+                                import org.apache.maven.plugin.MojoFailureException
+
+                                def bad_error_types = [ "SE_NO_SERIALVERSIONID" ]
+                                def whitelisted_error_types = [ "URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD", "DM_GC" ]
+                                //def bad_error_categories = [ "CORRECTNESS" ]
+                                def bad_error_categories = [ ]
+                                def depFile = new File(project.build.directory, 'findbugsXml.xml')
+                                if(depFile.exists()) {
+                                    def configuredValueHighBigCount = Integer.parseInt(project.getProperties().getProperty("findbug.threshold.high", "0"))
+                                    def BugCollection = new XmlSlurper().parse(depFile)
+                                    int error = 0
+                                    int highBugCount = 0
+                                    for(def instance : BugCollection.BugInstance) {
+                                        def category = instance.@category.text()
+                                        def priority = Integer.parseInt(instance.@priority.text())
+                                        def type = instance.@type.text()
+                                        def clazz = instance.Class
+                                        def sourceLine = instance.SourceLine
+                                        if(sourceLine==null) {
+                                            sourceLine = clazz.sourceLine
+                                        }
+                                        if(whitelisted_error_types.contains(type)) {
+                                            continue;
+                                        } else if(bad_error_types.contains(type)) {
+                                            printf("%s %s [%s-%s] %s %n", type, clazz.@classname, sourceLine.@start, sourceLine.@end, instance.LongMessage)
+                                            error++
+                                        } else if(bad_error_categories.contains(category)) {
+                                            printf("%s %s [%s-%s] %s %n", type, clazz.@classname, sourceLine.@start, sourceLine.@end, instance.LongMessage)
+                                            error++
+                                        }
+                                        if(priority<=1) {
+                                            printf("HIGH_PRIORITY %s %s [%s-%s] %s %n", type, clazz.@classname, sourceLine.@start, sourceLine.@end, instance.LongMessage)
+                                            highBugCount++
+                                        }
+                                    }
+                                    if(highBugCount>configuredValueHighBigCount || error>0) {
+                                        throw new MojoFailureException(String.format("%d(>%d) high priority errors, %d correctness errors.", highBugCount, configuredValueHighBigCount, error))
+                                    }
+                                    if(highBugCount>0) {
+                                        printf("%n%nFindbug warning summary :: %d high priority errors, %d correctless errors.%n%n", highBugCount, error)
+                                    }
+                                }
+                            ]]>
+            </source>
+        </configuration>
+    </execution>
+</executions>
+</plugin>
+
+
+
+<plugin>
+<groupId>org.apache.maven.plugins</groupId>
+<artifactId>maven-surefire-plugin</artifactId>
+<version>2.19.1</version>
+<executions>
+    <execution>
+        <id>default-test</id>
+        <phase>test</phase>
+        <goals>
+            <goal>test</goal>
+        </goals>
+        <configuration>
+            <parallel>methods</parallel>
+            <threadCount>20</threadCount>
+            <systemProperties>
+                <property>
+                    <name>groupToRun</name>
+                    <value>${groupToRun}</value>
+                </property>
+                <property>
+                    <name>com.yahoo.workdir</name>
+                    <value>src/test/resources</value>
+                </property>
+                <property>
+                    <name>db_url</name>
+                    <value>jdbc:h2:mem:app;DB_CLOSE_DELAY=-1;MVCC=TRUE</value>
+                </property>
+                <property>
+                    <name>db_rpt_url</name>
+                    <value>jdbc:h2:mem:reporting;DB_CLOSE_DELAY=-1;MVCC=TRUE;INIT=CREATE SCHEMA IF NOT EXISTS NA_REPORTING\;SET SCHEMA NA_REPORTING</value>
+                </property>
+            </systemProperties>
+            <properties>
+                <property>
+                    <name>listener</name>
+                    <value>common.DataProviderErrorListener,com.yahoo.mb.common.TimeTrackingListener,com.yahoo.mb.common.TestClassAlphabeticOrderInterceptor</value>
+                </property>
+                <property>
+                    <name>surefire.testng.verbose</name>
+                    <value>-1</value>
+                </property>
+                <property>
+                    <name>testrunfactory</name>
+                    <value>.common.GeminiTestRunnerFactory</value>
+                </property>
+                <property>
+                    <name>parallel</name>
+                    <value>instances</value>
+                </property>
+                <property>
+                    <name>configfailurepolicy</name>
+                    <value>continue</value>
+                </property>
+            </properties>
+        </configuration>
+    </execution>
+</executions>
+</plugin>
+

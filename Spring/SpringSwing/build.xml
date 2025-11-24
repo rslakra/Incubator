@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+	Ant Build Script
+	================
+	Author: Rohtash Singh
+	Since 1.5
+	Created On: 10/19/2010
+	Version: 1.0
+	
+	NOTE: Pass in the following properties from the build script based on target:
+-->
+<project name="SpringSwing" default="all" basedir=".">
+	<!--splash 
+		imageurl="${basedir}/build_logo.jpg"
+		progressRegExp="Progress: (.*)%" 
+		showduration="10" 
+		displayText="Building ..."/-->
+
+	<echo>Building Project ${ant.project.name} ...</echo>
+
+	<!-- build.properties file inclusion. -->
+	<property file="${basedir}/build.properties" />
+
+	<!-- Basic Structure Settings -->
+	<property name="base.dir" value="${basedir}" />
+	<property name="src.dir" value="${base.dir}/src" />
+	<property name="conf.dir" value="conf" />
+	<property name="lib.dir" value="lib" />
+	<property name="build.dir" value="${base.dir}/build" />
+	<property name="jar.file" value="${production.dir}/${ant.project.name}.jar" />
+	<property name="rmi-jar.file" value="${production.dir}/${ant.project.name}-RMI.jar" />
+	<property name="client-jar.file" value="${production.dir}/client.jar"/>
+	<property name="tar.file" value="${base.dir}/${ant.project.name}.tar" />
+	<property name="gz.file" value="${tar.file}.gz" />
+
+	<!-- Ant Debugging Properties -->
+	<property name="ant.verbose" value="true" />
+	<property name="ant.quiet" value="true" />
+
+	<!-- Build CLASSPATH Settings -->
+	<path id="build.classpath">
+		<fileset dir="${base.dir}/${lib.dir}" includes="**/*.jar" />
+	</path>
+
+	<!-- Property to print CLASSPATH -->
+	<property name="printBuildClassPath" refid="build.classpath" />
+
+	<!-- = = = = = = = = = = = = = = = = =
+	macrodef: echopath
+	= = = = = = = = = = = = = = = = = -->
+	<macrodef name="echopath">
+		<attribute name="pathid" />
+		<sequential>
+			<property name="line.pathprefix" value="|-- " />
+			<!-- get given path in a printable form -->
+			<pathconvert pathsep="${line.separator}${line.pathprefix}" 
+				property="echo.@{pathid}" refid="@{pathid}">
+			</pathconvert>
+			<echo />
+			<echo message="Path '@{pathid}'" />
+			<echo message="${line.pathprefix}${echo.@{pathid}}" />
+		</sequential>
+	</macrodef>
+
+	<echopath pathid="build.classpath" />
+	<echo />
+
+	<!-- create a property containing all .jar files, 
+		 prefix lib/, and seperated with a space -->
+	<pathconvert property="lib.classpath" pathsep=" ">
+		<mapper>
+			<chainedmapper>
+				<!-- remove absolute path -->
+				<flattenmapper />
+				<globmapper from="*" to="*" />
+			</chainedmapper>
+		</mapper>
+		<path>
+			<fileset dir="${base.dir}/${lib.dir}" includes="**/*.jar" />
+		</path>
+	</pathconvert>
+
+	<!-- Default Target Settings -->
+	<target name="all" depends="clean, build, end" />
+
+	<!-- Starts build creation process -->
+	<target name="start" description="Start's Build Process">
+		<!-- Create the Time Stamp -->
+		<tstamp>
+			<format property="TODAY" pattern="MM/dd/yyyy" />
+			<format property="DSTAMP" pattern="MM/dd/yyyy HH:mm:ss Z (EEE, dd MMM yyyy)" />
+			<format property="startDateTime" pattern="MM/dd/yyyy HH:mm:ss Z" />
+		</tstamp>
+		<echo />
+		<echo message="Build Process started at '${startDateTime}'" />
+		<echo />
+	</target>
+
+	<!-- Clean"'s purpose is to delete the contents of the build directory -->
+	<target name="clean" depends="start" 
+		description="Cleans the build dir's structure and jar files.">
+		<echo message="Cleaning ${build.dir} ..." />
+		<delete dir="${build.dir}" quiet="${ant.quiet}" />
+		<delete file="${jar.file}" verbose="${ant.verbose}" quiet="${ant.quiet}" />
+		<delete file="${rmi-jar.file}" verbose="${ant.verbose}" quiet="${ant.quiet}" />
+		<delete file="${client-jar.file}" verbose="${ant.verbose}" quiet="${ant.quiet}" />
+	</target>
+
+	<!-- Builds build directory structure -->
+	<target name="init">
+		<mkdir dir="${build.dir}" />
+	</target>
+
+	<!-- Automatically downloading dependencies via Ant	-->
+	<target name="get-dependencies">
+		<mkdir dir="${lib.dir}" />
+		<get 
+			dest="${lib.dir}/commons-logging-1.0.3.jar" 
+			usetimestamp="true" 
+			ignoreerrors="true" 
+			src="http://www.ibiblio.org/maven/commons-logging/jars/commons-logging-1.0.3.jar" />
+		<get 
+			dest="${lib.dir}/spring-1.2.3.jar" 
+			usetimestamp="true" 
+			ignoreerrors="true" 
+			src="http://www.ibiblio.org/maven/springframework/jars/spring-1.2.3.jar" />
+	</target>
+
+	<!-- Compiles all .java classes under the build folder. -->
+	<target name="compile" depends="init" description="Compiling .java files">
+		<echo message="Compiling '${src.dir}' into '${build.dir}'" />
+		<echo message="Classpath = ${printBuildClassPath}" />
+		<javac fork="${javac.fork}" 
+			srcdir="${src.dir}" 
+			destdir="${build.dir}" 
+			optimize="${javac.optimize}" 
+			debug="${javac.debug}" 
+			debuglevel="${javac.debug.level}" 
+			listfiles="${javac.listfiles}" 
+			includeantruntime="false" 
+			classpathref="build.classpath" />
+	</target>
+
+	<!-- Creates .jar file to make it available for deployment. -->
+	<target name="build" depends="compile">
+		<echo message="Building ..." />
+
+		<!-- create lib directory -->
+		<mkdir dir="${build.dir}/${lib.dir}" />
+
+		<!-- copy library files into lib directory -->
+		<copy todir="${build.dir}/${lib.dir}">
+			<fileset dir="${base.dir}/${lib.dir}" includes="**/*" />
+		</copy>
+
+
+		<!-- Copy all configuration, properties, and *.xml files from 
+			 src folder (excluding .java files) to build folder. -->
+		<mkdir dir="${build.dir}/${conf.dir}" />
+		<copy todir="${build.dir}/${conf.dir}" overwrite="true">
+			<fileset dir="${base.dir}/${conf.dir}">
+				<include name="**/*.xml" />
+			</fileset>
+		</copy>
+		<!--copy todir="${build.dir}">
+			<fileset dir="${src.dir}" includes="**/*.xml" />
+		</copy-->
+
+		<!-- Create jar file with MANIFEST.MF and place in /lib directory -->
+		<jar destfile="${jar.file}">
+			<!--fileset dir="${build.dir}" includes="**" /-->
+			<fileset dir="${build.dir}" />
+			<manifest>
+				<attribute name="Built-By" value="${built-by}" />
+				<section name="Vendor Details">
+					<attribute name="Implementation-Title" value="${ant.project.name}" />
+					<attribute name="Implementation-Vendor" value="${implementation-vendor}" />
+					<attribute name="Implementation-Vendor-Id" value="${implementation-vendor-id}" />
+					<attribute name="Implementation-Version" value="v${implementation-version} ${TODAY}" />
+					<attribute name="Specification-Title" value="${ant.project.name}" />
+					<attribute name="Specification-Vendor" value="${implementation-vendor}" />
+					<attribute name="Specification-Version" value="v${implementation-version}" />
+				</section>
+
+				<!-- set magically generated library path -->
+				<attribute name="Class-Path" value="${lib.classpath}" />
+				<!-- defines whether this JAR file is sealed or not -->
+				<attribute name="Sealed" value="${sealed}" />
+				<!-- defines the relative path of the main application class which the 
+				launcher will load at startup time -->
+				<attribute name="Main-Class" value="${app.main-class}" />
+			</manifest>
+		</jar>
+
+		<echo message="Builds created successfully!" />
+	</target>
+
+	<!-- Creates .tar and .tar.gz file for distribution -->
+	<target name="distribute" description="Creating .tar and .tar.gz file for distribution.">
+		<!-- Create the Time Stamp -->
+		<!--tar destfile="${tar.file}" basedir="${base.dir}"/-->
+		<tar destfile="${tar.file}" basedir="${base.dir}" excludes="classes, build, **/*.log" />
+		<gzip destfile="${gz.file}" src="${tar.file}" />
+		<echo />
+		<echo message="Created Source '${tar.file}' and '${gz.file}' files." />
+		<echo />
+	</target>
+
+	<path id="classpath">
+		<pathelement location="${build.dir}"/>
+		<fileset dir="${lib.dir}"/>
+	</path>
+
+	<target name="run" depends="build">
+		<java classname="${app.main-class}" fork="true">
+			<classpath>
+				<path refid="classpath"/>
+				<pathelement location="${build.dir}/classes"/>
+			</classpath>
+		</java>
+	</target>
+
+	<!-- Ends build creation process -->
+	<target name="end" description="Build Process End's">
+		<!-- Create the Time Stamp -->
+		<tstamp>
+			<format property="TODAY" pattern="MM/dd/yyyy" />
+			<format property="DSTAMP" pattern="MM/dd/yyyy HH:mm:ss Z (EEE, dd MMM yyyy)" />
+			<format property="endDateTime" pattern="MM/dd/yyyy HH:mm:ss Z" />
+		</tstamp>
+		<echo />
+		<echo message="Build Process finished at '${endDateTime}'" />
+		<echo />
+	</target>
+
+</project>
